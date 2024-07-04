@@ -1,0 +1,71 @@
+{% extends 'base-sidebar.html' %} 
+{% set active_page = "logging" %}
+{% block content_sidebar %}
+<div class="p-3">
+  <div class="d-flex">
+    <div class="flex-grow-1">
+      <h2>Log</h2>
+    </div>
+  </div>
+  <hr class="hr" />
+  <table class="table">
+    <thead>
+      <tr>
+        <th scope="col">#</th>
+        <th scope="col">Type node</th>
+        <th scope="col">ID node</th>
+        <th scope="col">Timestamp</th>
+        <th scope="col">Latitude</th>
+        <th scope="col">Longitude</th>
+        <th scope="col">Altitude</th>
+      </tr>
+    </thead>
+    <tbody id="log">
+      <!-- loop data here -->
+    </tbody>
+  </table>
+  <div class="d-flex justify-content-end">
+      <nav aria-label="Page navigation example">
+        <ul class="pagination">
+          <li class="page-item disabled">
+            <a class="page-link" href="#" tabindex="-1">Previous</a>
+          </li>
+          <li class="page-item active">
+            <a class="page-link" href="#">1</a>
+          </li>
+          <li class="page-item">
+            <a class="page-link" href="#">2</a>
+          </li>
+          <li class="page-item">
+            <a class="page-link" href="#">3</a>
+          </li>
+          <li class="page-item">
+            <a class="page-link" href="#" tabindex="+1">Next</a>
+          </li>
+        </ul>
+      </nav>
+  </div>
+</div>
+
+<script>
+  data = {{data | tojson}};
+  tb = ``;
+  index = 1;
+  for(i=data.length-1; i>=data.length-20; i--){
+    temp = data[i]
+    tb += `
+      <tr>
+        <th scope="row">${index}</th>
+        <td>${data[i].type_node}</td>
+        <td>${data[i].id_node}</td>
+        <td>${data[i].timestamp}</td>
+        <td>${data[i].latitude}</td>
+        <td>${data[i].longitude}</td>
+        <td>${data[i].altitude}</td>
+      </tr>
+    `
+    index += 1;
+  }
+  document.getElementById("log").innerHTML = tb;
+</script>
+{% endblock %}

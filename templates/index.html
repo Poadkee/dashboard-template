@@ -1,0 +1,839 @@
+{% extends 'base-sidebar.html' %} 
+{% set active_page = "index" %}
+{% block content_sidebar %}
+
+<!-- socket -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js" integrity="sha512-q/dWJ3kcmjBLU4Qc47E4A9kTB4m3wuTY7vkFJDTZKjTs8jhyGQnaUrxa0Ytd0ssMZhbNua9hE+E7Qv1j+DyZwA==" crossorigin="anonymous"></script>
+<script type="text/javascript" charset="utf-8">
+    var socket = io();
+    socket.on('get_live_data', function(DATA) {
+        liveData.push(...DATA);
+        console.log(data);
+        check_box = document.getElementById("timeSelect").checked;
+        if(check_box){ // if live mode
+            console.log("update start");
+            data.push(...DATA);
+            printNode();
+        }
+        console.log("Got socket");
+    });
+
+    // socket.on('get_drawn_data', function(DATA) {
+    //     console.log("Got socket from drawing item");
+    //     var jsonData = JSON.parse(DATA.item);
+    //     var layerL = geoToLayer(jsonData, DATA.id_layer)
+    //     drawnItems.addLayer(layerL);
+    //     getPathforDisplay();
+    // });
+
+    // socket.on('get_edited_data', function(DATA) {
+    //     console.log("Got socket from editing item");
+    //     DATA.forEach(e => {
+    //         console.log("eachData : ",e.id_layer)
+    //         var layer = '';
+    //         drawnItems.eachLayer(lay => {
+    //             if(lay.options.id_layer == e.id_layer){
+    //                 layer = lay;
+    //                 return;
+    //             }
+    //         })
+    //         if(layer != ''){
+    //             var jsonData = JSON.parse(e.item)
+    //             var layerL = geoToLayer(jsonData, e.id_layer)
+    //             map.removeLayer(layer)
+    //             drawnItems.addLayer(layerL)
+    //             getPathforDisplay();
+    //         }
+    //     })
+    // });
+
+    // socket.on('get_deleted_data', function(DATA) {
+    //     console.log("Got socket from deleting item");
+    //     DATA.forEach(e => {
+    //         console.log(e.id_layer)
+    //         drawnItems.eachLayer(layer => {
+    //             if(layer.options.id_layer == e.id_layer)
+    //                 map.removeLayer(layer)
+    //         })
+    //     })
+    // });
+</script>
+
+<!-- <div>
+    <div><h2>This is a map</h2>
+    <div style="display:inline;">
+        <p>You are currently logged in as {{ name }}</p> 
+    </div>
+    <div style="display:inline;">    
+        <a href="logout">Logout</a>
+    </div> 
+</div>-->
+
+<!-- show map -->
+<div id="map"></div>
+
+<script>
+    // ref: https://leafletjs.com/plugins.html#user-interface
+    // ref: https://leaflet.github.io/Leaflet.draw/docs/leaflet-draw-latest.html
+    // https://leafletjs.com/reference.html#control-layers
+    // var map = L.map('map').setView({{start_map_position}}, 20); // ตำแหน่งเริ่มต้นของแผนที่
+    var data = {{data | tojson}};
+    var liveData = data;
+    var ids = {{ids | tojson}}
+    var mapOptions = {
+        center: {{start_map_position}},
+        // center: [13.208009,100.815547],
+        zoom: 17,
+    };
+    var osmUrl = 'http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+    var osmAttrib = '&copy; <a href="http://openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+    var osm = L.tileLayer(osmUrl, { maxZoom: 18, attribution: osmAttrib });
+    var map = new L.Map('map', mapOptions);
+    var drawnItems = L.featureGroup().addTo(map); //L.featureGroup();
+    // dock = new L.marker({{start_map_position}}).bindPopup("สมมุติว่าเป็นท่าเรือ").addTo(map);
+    // dock = new L.marker([13.27290873667692, 100.92826290682596]).bindPopup("gateway").addTo(map);
+    // set color for display node
+    var greyIcon = new L.Icon({
+        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-grey.png',
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34],
+        shadowSize: [41, 41]
+    });
+    var blueIcon = new L.Icon({
+        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34],
+        shadowSize: [41, 41]
+    });
+    var greenIcon = new L.Icon({
+        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34],
+        shadowSize: [41, 41]
+    });
+    var redIcon = new L.Icon({
+        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-Red.png',
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34],
+        shadowSize: [41, 41]
+    });
+    var orangeIcon = new L.Icon({
+        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-orange.png',
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34],
+        shadowSize: [41, 41]
+    });
+    var coutionIcon = new L.Icon({
+        iconUrl: "{{ url_for('static', filename='icon/coution.png') }}",
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+        iconSize: [41, 41],
+        iconAnchor: [25, 30],
+        popupAnchor: [1, -34],
+        shadowSize: [41, 41]
+    });
+
+    var greyCircleIcon = L.divIcon({
+        className: 'grey-circle-icon',
+        html: '<div style="background-color: grey; border-radius: 50%; width: 10px; height: 10px;"></div>'
+    });
+    var blueCircleIcon = L.divIcon({
+        className: 'blue-circle-icon',
+        html: '<div style="background-color:#0086FF; border-radius: 50%; width: 10px; height: 10px;"></div>'
+    });
+    var greenCircleIcon = L.divIcon({
+        className: 'green-circle-icon',
+        html: '<div style="background-color:green; border-radius: 50%; width: 10px; height: 10px;"></div>'
+    });
+    var redCircleIcon = L.divIcon({
+        className: 'red-circle-icon',
+        html: '<div style="background-color:red; border-radius: 50%; width: 10px; height: 10px;"></div>'
+    });
+    var orangeCircleIcon = L.divIcon({
+        className: 'orange-circle-icon',
+        html: '<div style="background-color:orange; border-radius: 50%; width: 10px; height: 10px;"></div>'
+    });
+
+    var greyLine = {color: 'grey',
+                    weight: 3,
+                    smoothFactor: 1}
+    var blueLine = {color: 'blue',
+                    weight: 3,
+                    smoothFactor: 1}
+    var greenLine = {color: 'green',
+                    weight: 3,
+                    smoothFactor: 1}
+    var redLine = {color: 'red',
+                    weight: 3,
+                    smoothFactor: 1}
+    var orangeLine = {color: 'orange',
+                    weight: 3,
+                    smoothFactor: 1}
+    // -------------------------------------------------------
+    var layersControl = L.control.layers({
+        'OSM': osm.addTo(map),
+        "Google": L.tileLayer('http://www.google.cn/maps/vt?lyrs=s@189&gl=cn&x={x}&y={y}&z={z}', {
+            attribution: 'google'
+        })
+    }, {  
+        'ความเร็วเรือ': L.marker([7.011608781252133, 100.50496289286595],{opacity: 0}),
+        'เส้นทางการเดินเรือ': L.marker([7.011608781252133, 100.50496289286595],{opacity: 0}),
+        'ระยะเวลาถึงท่าเรือ' : L.marker([7.011608781252133, 100.50496289286595],{opacity: 0}),
+    }, { position: 'topleft', collapsed: false, autoZIndex: false}).addTo(map);
+
+    L.control.custom({ // time mode
+        position: 'topright',
+        content : `
+            <div style="background: white; padding: 10px 0px 10px 10px; border: 2px solid rgba(0, 0, 0, .3); border-radius: 6px;">
+                <div>
+                    <div style="display:inline;">
+                        <label class="form-check-label" for="timeSelect"> Live Mode </label>
+                    </div>
+                    <div class="form-switch" style="display:inline;">
+                        <input class="form-check-input" type="checkbox" id="timeSelect" checked>
+                    </div>
+                </div>
+                <div>
+                    <div style="display:inline;">
+                        <label class="form-check-label" for="setStart"> Set Start Time </label>
+                    </div>
+                    <div class="form-switch" style="display:inline;">
+                        <input class="form-check-input" type="checkbox" id="setStart">
+                    </div>
+                </div>
+
+                <form class="row">
+                    <label class="col-2 col-form-label">Start</label>
+                    <div class="col-9">
+                        <input type="datetime-local" class="form-control" id="startTime" style="font-size: 8pt;"/>
+                    </div>
+                </form>
+
+                <form class="row">
+                    <label class="col-2 col-form-label">End</label>
+                    <div class="col-9">
+                        <input type="datetime-local" class="form-control" id="endTime" style="font-size: 8pt;"/>
+                    </div>
+                </form>
+            </div>`,
+        classes : 'timestamp',
+        style : {},
+        events: {}
+    }).addTo(map);
+
+    
+    var colorDisplay = [ // MarkerColor, dotColor, LineColor
+                        [greyIcon, greyCircleIcon, greyLine],
+                        [blueIcon, blueCircleIcon, blueLine],
+                        [greenIcon, greenCircleIcon, greenLine],
+                        [orangeIcon, orangeCircleIcon, orangeLine],
+                    ]
+    var nodeColorIndex = 0;
+    var nodeForDisplay = [];
+    var textForNodePath = `
+            <div style="background: white; padding: 10px 10px 10px 10px; border: 2px solid rgba(0, 0, 0, .3); border-radius: 6px;">
+                <div>
+                    <div style="display:inline;">
+                        <label class="form-check-label"> ID node for display </label>
+                    </div>
+                </div>`;
+    ids.forEach((e) => {
+        id = e.split("_"); // [typeNode, idNode]
+        id.push(nodeColorIndex); // [typeNode, idNode, nodeColorIndex]
+        nodeForDisplay.push(id);
+        textForNodePath += `
+            <div>
+                <div style="display:inline;">
+                    <label class="form-check-label"> ${id[0]}${id[1]} </label>
+                </div>
+                <div style="display:inline;">
+                    <input class="form-check-input" type="checkbox" name="idNodeDisplay" value="${id[0]}_${id[1]}_${nodeColorIndex}"checked>
+                </div>
+                <div style="display:inline-block; height: 3px; width: 60px; background:${colorDisplay[nodeColorIndex][2].color};"></div>
+            </div>`
+        if(nodeColorIndex >= colorDisplay.length-1){
+            nodeColorIndex = 0;
+        }else{
+            nodeColorIndex += 1;
+        }
+    });
+    textForNodePath += `</div>`;
+
+    L.control.custom({ // time mode
+        position: 'topleft',
+        content : textForNodePath,
+        classes : 'timestamp',
+        style : {},
+        events: {}
+    }).addTo(map);
+
+    var idCheck = document.getElementsByName('idNodeDisplay');
+    for(temp of idCheck){
+        temp.addEventListener('change', getIdForDisplay);
+    }
+
+    function getIdForDisplay(){
+        nodeForDisplay = []
+        var temps = document.getElementsByName('idNodeDisplay');
+        for(temp of temps){
+            if(temp.checked){
+                let typeId = temp.value.split("_");
+                nodeForDisplay.push(typeId)
+            }
+        }
+        printNode();
+    }
+
+    L.control.custom({ // Logo
+        position: 'bottomright',
+        content : `
+            <div>
+                <img src="{{ url_for('static', filename='img/GISTDA_LOGO.png') }}" width="80">
+                <img src="{{ url_for('static', filename='img/PSU_Logo.png') }}" width="75">
+            </div>`,
+        classes : 'Logo',
+        style : {},
+        events: {}
+    }).addTo(map);
+
+    map.on('overlayadd overlayremove', function (e) {
+        let temp;
+        if(e.name == "ความเร็วเรือ") {temp = "velocity"}
+        else if(e.name == "เส้นทางการเดินเรือ") {temp = "path"}
+        else if(e.name == "ระยะเวลาถึงท่าเรือ") {temp = "dock"}
+        displayOption(temp);
+    });
+
+    map.addControl(new L.Control.Draw({
+        edit: {
+            featureGroup: drawnItems,
+        },
+        draw: {
+            polygon: false,
+            rectangle: false,
+            // marker: {
+            //     icon: L.icon({
+            //         iconUrl: 'http://leafletjs.com/examples/custom-icons/leaf-green.png',
+            //         shadowUrl: 'http://leafletjs.com/examples/custom-icons/leaf-shadow.png'
+            //     })
+            // }
+        },
+    }));
+    
+    // print item from database
+    item  = {{item | tojson}};
+    item.forEach(e => {
+        try{
+            var jsonData = JSON.parse(e.item);
+            layerL = geoToLayer(jsonData, e.id_layer)
+            drawnItems.addLayer(layerL);
+        }catch(err){
+            console.log(err.message)
+        }
+    });
+
+    function idGen(){
+        let id = Math.random().toString(16).slice(2);
+        return id;
+    }
+
+    function geoToLayer(layerJson, id_layer=null){ // geoJson Layer -> normal layer
+        if(layerJson.geometry.type == "LineString"){
+            // console.log("PATH")
+            path = []
+            for(i=0; i<layerJson.geometry.coordinates.length; i++){
+                pos = layerJson.geometry.coordinates[i];
+                path.push([pos[1], pos[0]]);
+            }
+            var layerL = L.polyline(path, {
+                stroke: layerJson.properties.stroke,
+                color: layerJson.properties.color,
+                weight: layerJson.properties.weight,
+                opacity: layerJson.properties.opacity,
+                fill: layerJson.properties.fill,
+                clickable: layerJson.properties.clickable,
+            })
+        }else if(layerJson.properties.radius){
+            // console.log("Circle")
+            var layerL = L.circle([layerJson.geometry.coordinates[1], layerJson.geometry.coordinates[0]], {
+                stroke: layerJson.properties.stroke,
+                color: layerJson.properties.color,
+                weight: layerJson.properties.weight,
+                opacity: layerJson.properties.opacity,
+                fill: layerJson.properties.fill,
+                fillColor: layerJson.properties.fillColor,
+                fillOpacity: layerJson.properties.fillOpacity,
+                clickable: layerJson.properties.clickable,
+                radius: layerJson.properties.radius,
+            })
+        }else{ // marker
+            // console.log("Marker")
+            var layerL = L.marker([layerJson.geometry.coordinates[1], layerJson.geometry.coordinates[0]])
+        }
+
+        if(id_layer == null){
+            layerL.options.id_layer = idGen()
+        }else{
+            layerL.options.id_layer = id_layer
+        }
+
+        return layerL;
+    }
+
+    map.on(L.Draw.Event.CREATED, function (event) {
+        var layer = event.layer;
+        var layerJson = transformLayerToJson(layer) 
+        var layerL = geoToLayer(layerJson)
+        drawnItems.addLayer(layerL);
+        if(layerJson.geometry.type == "LineString"){
+            getPathforDisplay();
+        }
+
+        var toString = JSON.stringify(layerJson);
+        $.get("drawn", { items: toString, id_layer: layerL.options.id_layer }).done(function(DATA){
+            console.log(DATA)
+        })
+    });
+
+    map.on(L.Draw.Event.EDITED, function (event) {
+        var layers = event.layers;
+        var stringID = ''
+        var stringlayer = ''
+        var isThereString = false;
+        layers.eachLayer(function (layer) {
+            var layerJson = transformLayerToJson(layer) 
+            var toString = JSON.stringify(layerJson);
+            sID = layerJson.properties.id_layer
+            stringID = stringID + "__" + sID
+            stringlayer = stringlayer + "__" + toString
+            if(layerJson.geometry.type == "LineString"){
+                isThereString = true;
+            }
+        });
+        if(isThereString){
+            getPathforDisplay();
+        }
+
+        $.get("edited", { id_layers: stringID.slice(2), properties: stringlayer.slice(2) }).done(function(DATA){
+            console.log(DATA)
+        })
+    });
+
+    map.on(L.Draw.Event.DELETED, function (event) {
+        var layers = event.layers;
+        var string = ''
+        var isThereString = false;
+        layers.eachLayer(function (layer) {
+            layerJson = transformLayerToJson(layer) 
+            s = layerJson.properties.id_layer
+            string = string + "__" + s
+            if(layerJson.geometry.type == "LineString"){
+                console.log("has string")
+                isThereString = true;
+            }
+        });
+        if(isThereString){
+            getPathforDisplay();
+        }
+
+        $.get("deleted", { id_layers: string.slice(2) }).done(function(DATA){
+            console.log(DATA)
+        })
+    });
+    
+    function transformLayerToJson(layer) {
+        const json = layer.toGeoJSON();
+        json.properties = layer.options;
+        if(layer instanceof L.Circle){
+            json.properties.radius = layer.getRadius();
+        }
+        return json;
+    }
+
+    // function temp(layer){
+    //     var collection = layer.toGeoJSON();
+    //     var stringObj = JSON.stringify(collection);
+
+    //     // แปลงกลับ
+    //     var jsonData = JSON.parse(stringObj);
+    //     var featureGroup = L.geoJSON(jsonData);
+    // }
+
+    var pathsForDisplay = [];
+    function getPathforDisplay(){
+        pathsForDisplay = []; // reset
+        var collection = drawnItems.toGeoJSON();
+        for(layer of collection.features){
+            if(layer.geometry.type == "LineString"){
+                pathForDisplay = [];
+                for(i=0; i<layer.geometry.coordinates.length; i+=2){
+                    pos = layer.geometry.coordinates[i];
+                    pathForDisplay.push([pos[1], pos[0]]);
+                };
+                pathsForDisplay.push(pathForDisplay)
+            }
+        }
+        printNode();
+    }
+
+    var startTime = document.getElementById("startTime");    
+    startTime.addEventListener('change', set_time);
+
+    var endTime = document.getElementById("endTime");
+    endTime.addEventListener('change', set_time);
+
+    var timeSelect = document.getElementById("timeSelect");
+    timeSelect.addEventListener('change', selectMode);
+
+    var setStart = document.getElementById("setStart");
+    setStart.addEventListener('change', setStartLive);
+
+    function set_time(e){ // for selected time as history mode
+        try{
+            let d = new Date(document.getElementById("startTime").value);
+            var start = d.getTime(); // time in ms
+            d = new Date(document.getElementById("endTime").value);
+            var end = d.getTime(); // time in ms
+
+            if(start > end){
+                if(e.target.id == "startTime"){
+                    start = end;
+                    d = new Date(start);
+                    date = d.getFullYear() + "-"
+                            + String(d.getMonth()+1).padStart(2, '0')  + "-" 
+                            + String(d.getDate()).padStart(2, '0') + "T"  
+                            + String(d.getHours()).padStart(2, '0') + ":"  
+                            + String(d.getMinutes()).padStart(2, '0')
+                    startTime.value = date;
+                }else{
+                    end = start;
+                    d = new Date(end);
+                    date = d.getFullYear() + "-"
+                            + String(d.getMonth()+1).padStart(2, '0')  + "-" 
+                            + String(d.getDate()).padStart(2, '0') + "T"  
+                            + String(d.getHours()).padStart(2, '0') + ":"  
+                            + String(d.getMinutes()).padStart(2, '0')
+                    endTime.value = date;
+                }
+            }
+
+            $.get("history", { start: start, end: end } ).done(function(DATA){
+                data = DATA.data;
+                console.log(data);
+                printNode();
+            })
+        }catch(err){
+            console.log(err.message)
+        }
+    }
+
+    function setStartLive(){
+        check_box = document.getElementById("setStart").checked;
+        if(check_box){
+            data = [];
+        }else{
+            data = liveData;
+        }
+        printNode();
+    }
+
+    function selectMode(){
+        check_box = document.getElementById("timeSelect").checked; // if live mode
+        check_box_setStart = document.getElementById("setStart"); // if live mode
+        if(check_box){
+            check_box_setStart.disabled = false;
+            startTime.disabled = true;
+            endTime.disabled = true;
+            var d = new Date();
+            var d_pre = new Date(d.getTime() - 24*60*60*1000);
+            var currentdate = d.getFullYear() + "-"
+                            + String(d.getMonth()+1).padStart(2, '0')  + "-" 
+                            + String(d.getDate()).padStart(2, '0') + "T"  
+                            + String(d.getHours()).padStart(2, '0') + ":"  
+                            + String(d.getMinutes()).padStart(2, '0')
+
+            var previous_time = d_pre.getFullYear() + "-"
+                            + String(d_pre.getMonth()+1).padStart(2, '0')  + "-" 
+                            + String(d_pre.getDate()).padStart(2, '0') + "T"  
+                            + String(d_pre.getHours()).padStart(2, '0') + ":"  
+                            + String(d_pre.getMinutes()).padStart(2, '0')
+            startTime.value = previous_time;
+            endTime.value = currentdate;
+
+            if(check_box_setStart.checked){
+                data = [];
+            }else{
+                data = liveData;
+            }
+            printNode();
+        }else{ // if history mode
+            check_box_setStart.disabled = true;
+            endTime.disabled = false;
+            startTime.disabled = false;
+        }
+    }
+
+    var displayVelocity = false;
+    var displayPath = false;
+    var displayDock = false;
+    function displayOption(e){
+        if(e == "velocity"){
+            displayVelocity = !displayVelocity;
+        }else if(e == "path"){
+            displayPath = !displayPath;
+            if(displayPath){
+                getPathforDisplay();
+            }
+        }else if(e == "dock"){
+            displayDock = !displayDock;
+        }
+        // console.log(displayVelocity, displayPath, displayDock);
+        printNode();
+    }
+
+    function deleteAllLayer(){
+        // map.eachLayer(function (layer) {
+        //     if (layer instanceof L.Marker)
+        //         if(layer != dock) // if not a dock Marker
+        //             map.removeLayer(layer); // Delete marker
+        //     if (layer instanceof L.Polyline)
+        //         map.removeLayer(layer); // Delete Line
+        // });
+        markers.eachLayer(function(layer){
+            map.removeLayer(layer);
+        })
+    }
+
+    function getTime(tStart, tEnd) { // format time YYYY-MM-DDThh:mm:ss
+        let d = new Date(tStart);
+        tStart = d.getTime(); // time in ms
+        d = new Date(tEnd);
+        tEnd = d.getTime(); // time in ms
+        return (tEnd-tStart)/(1000*60*60); // return time as hour
+    }
+
+    function getDistance(origin, destination) {
+        // return distance in meters
+        var lon1 = toRadian(origin[1]),
+            lat1 = toRadian(origin[0]),
+            lon2 = toRadian(destination[1]),
+            lat2 = toRadian(destination[0]);
+
+        var deltaLat = lat2 - lat1;
+        var deltaLon = lon2 - lon1;
+
+        var a = Math.pow(Math.sin(deltaLat/2), 2) + Math.cos(lat1) * Math.cos(lat2) * Math.pow(Math.sin(deltaLon/2), 2);
+        var c = 2 * Math.asin(Math.sqrt(a));
+        var EARTH_RADIUS = 6371;
+        return c * EARTH_RADIUS; // return distance as kilometer
+    }
+    function toRadian(degree) {
+        return degree*Math.PI/180;
+    }
+    // var distance = getDistance([lat1, lng1], [lat2, lng2])
+
+    var markers = L.layerGroup();
+    function updateNode(type_node, id_node, colorIndex){
+        check_box = document.getElementById("timeSelect").checked; // mode check
+        markerIcon = colorDisplay[colorIndex][0]
+        dotColor = colorDisplay[colorIndex][1]
+        lineColor = colorDisplay[colorIndex][2]
+        
+        let last_position;
+        let lst_data = [];
+        let v_kmHr = 0, v_knot = 0;
+        for(i=0; i<data.length; i++){
+            if(data[i].type_node == type_node && data[i].id_node == id_node){
+                lst_data.push(data[i]);
+                last_position = [data[i].latitude, data[i].longitude];
+            }
+        }
+
+        var quantity_node; // max quantity node to display for live mode
+        let node_limit = 100;
+        if(check_box){
+            if(lst_data.length > node_limit){
+                quantity_node = lst_data.length - node_limit;
+            }else{
+                quantity_node = 0;
+            }
+        }else{
+            quantity_node = 0;
+        }
+        
+
+        for(i=quantity_node; i<lst_data.length; i++){
+            var type_node = lst_data[i].type_node;
+            var id_node = lst_data[i].id_node;
+            let timeStamp = lst_data[i].timestamp;
+            var latitude = lst_data[i].latitude;
+            var longitude = lst_data[i].longitude;
+            var msg_type = lst_data[i].msgType;
+            var message = lst_data[i].message;
+            var sigLevel = lst_data[i].sigLevel;
+            let position = [latitude, longitude];
+
+            if(msg_type == "e"){
+                textColor = "red";
+            }else{
+                textColor = "black";
+            }
+
+            if(i > quantity_node){ // if this is second marker
+                previousLatitude = lst_data[i-1].latitude;
+                previousLongtitude = lst_data[i-1].longitude;
+                previousTime = lst_data[i-1].timestamp;
+                polyline = L.polyline([[previousLatitude, previousLongtitude], position], lineColor).addTo(map);
+                markers.addLayer(polyline);
+                t = getTime(previousTime, timeStamp);
+                s = getDistance([previousLatitude, previousLongtitude], position);
+                v_knot = (s/t) / 1.852; // knot
+                v_kmHr = (s/t); // km/hr
+            }
+
+            var velocity = v_kmHr;
+            let popupContent;
+            if(displayVelocity){
+                popupContent = L.popup().setContent(`
+                    <B>Type node : </B>${type_node}</br>
+                    <B>ID node : </B>${id_node}</br>
+                    <B>Timestamp : </B>${timeStamp}</br>
+                    <B>Position : </B>${position}</br>
+                    <B>Velocity : </B>${velocity.toFixed(4)} km/hr</br>
+                    <B>GNSS C/N : </B>-${sigLevel} </br>
+                    <div style="color:${textColor}"><B>Message : </B>${message}</div>
+                `);
+            }else{
+                popupContent = L.popup().setContent(`
+                    <B>Type node : </B>${type_node}</br>
+                    <B>ID node : </B>${id_node}</br>
+                    <B>Timestamp : </B>${timeStamp}</br>
+                    <B>Position : </B>${position}</br>
+                    <B>GNSS C/N : </B>-${sigLevel} </br>
+                    <div style="color:${textColor}"><B>Message : </B>${message}</div>
+                `);
+            }
+            
+            if(i == lst_data.length-1){
+                t = getDistance(position, {{start_map_position}})/v_kmHr; // time in hr
+                if(displayDock){
+                    if(displayVelocity){
+                        popupContent.setContent(`
+                            <B>Type node : </B>${type_node}</br>
+                            <B>ID node : </B>${id_node}</br>
+                            <B>Timestamp : </B>${timeStamp}</br>
+                            <B>Position : </B>${position}</br>
+                            <B>Velocity : </B>${velocity.toFixed(4)} km/hr</br>
+                            <B>time to dock : </B>${t.toFixed(4)} hr</br>
+                            <B>GNSS C/N : </B>-${sigLevel} </br>
+                            <div style="color:${textColor}"><B>Message : </B>${message}</div>
+                        `);
+                    }else{
+                        popupContent.setContent(`
+                            <B>Type node : </B>${type_node}</br>
+                            <B>ID node : </B>${id_node}</br>
+                            <B>Timestamp : </B>${timeStamp}</br>
+                            <B>Position : </B>${position}</br>
+                            <B>time to dock : </B>${t.toFixed(4)} hr</br>
+                            <B>GNSS C/N : </B>-${sigLevel} </br>
+                            <div style="color:${textColor}"><B>Message : </B>${message}</div>
+                        `);
+                    }
+                }
+                if(msg_type == "e"){
+                    marker = new L.marker(position, {icon: coutionIcon}).bindPopup(popupContent).addTo(map); // create last Marker with alert
+                }else{
+                    marker = new L.marker(position, {icon: markerIcon}).bindPopup(popupContent).addTo(map); // create last Marker
+                }
+                console.log("marker")
+            }else{
+                if(msg_type == "e"){
+                    marker = new L.marker(position, { icon: coutionIcon }).bindPopup(popupContent).addTo(map); // create dot Marker with alert
+                }else{
+                    marker = new L.marker(position, { icon: dotColor }).bindPopup(popupContent).addTo(map); // create dot Marker
+                }
+                console.log("dot")
+            }
+            markers.addLayer(marker);
+        }
+        
+        // update path
+        if(displayPath && last_position && pathsForDisplay.length != 0){
+            if(pathsForDisplay.length != 0){
+                paths = pathsForDisplay;
+            }
+            let path_index = 0;
+            let best_index;
+            let best_distance = Infinity;
+            for(path of paths){ // for each path
+                let start_distance = getDistance(last_position, path[0]);
+                for(i=0; i<path.length; i++){ // for each position of path
+                    let position = path[i];
+                    let s = getDistance(last_position, position);
+                    if(s <= start_distance){ // start new position with nearest position
+                        start_distance = s;
+                        // marker = new L.marker(position, { icon: greenCircleIcon }).addTo(map);
+                        // markers.addLayer(marker);
+                    }else{
+                        // marker = new L.marker(position, { icon: greenCircleIcon }).addTo(map);
+                        // markers.addLayer(marker);
+                        // break;
+                    }
+                }
+                if(start_distance < best_distance){
+                    best_distance = start_distance;
+                    best_index = path_index;
+                }
+                path_index++;
+            }
+            let chosen_path = paths[best_index]
+            start_distance = getDistance(last_position, path[0]);
+            prePosition = last_position;
+            for(i=0; i<chosen_path.length; i++){
+                let position = chosen_path[i];
+                let s = getDistance(last_position, position);
+                if(s <= start_distance){ // start new position with nearest position
+                    start_distance = s;
+                }else{
+                    marker = new L.marker(position, { icon : blueCircleIcon }).bindPopup(type_node + id_node).addTo(map);
+                    markers.addLayer(marker);
+                    polylines = L.polyline([prePosition, position], { // create Line
+                        color: '#0086FF',
+                        weight: 3,
+                        smoothFactor: 1
+                    }).addTo(map);
+                    markers.addLayer(polylines);
+                    prePosition = position;
+                }
+            }
+        }
+    }
+
+    function printNode(){
+        deleteAllLayer();
+        // console.log(nodeForDisplay);
+        nodeForDisplay.forEach((typeId) => {
+            try{
+                type = typeId[0];
+                id = typeId[1];
+                colorIndex = typeId[2];
+                updateNode(type_node = type, id_node = id, colorIndex = colorIndex); // (type, id, colorIndex)
+            }catch(err){
+                console.log(err.message)
+            }
+            
+        })
+    }
+
+    selectMode();
+</script>
+{% endblock %}
